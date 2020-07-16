@@ -16,11 +16,7 @@ resource "aws_iam_role" "main" {
   "Statement": [
     {
       "Effect": "Allow",
-      "Principal": {
-        "Service": [
-          "codebuild.amazonaws.com"
-        ]
-      },
+      "Principal": {"Service": ["codebuild.amazonaws.com"]},
       "Action": "sts:AssumeRole"
     }
   ]
@@ -125,7 +121,10 @@ data "aws_iam_policy_document" "main" {
 
   # Encrypted SSM parameters
   statement {
-    actions = ["kms:Decrypt"]
+    actions = [
+        "kms:Decrypt",
+        "kms:DescribeKey",
+    ]
 
     resources = [
       var.kms_ssm_key_arn
