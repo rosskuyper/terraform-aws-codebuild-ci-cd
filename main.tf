@@ -79,7 +79,7 @@ data "aws_iam_policy_document" "main" {
     ]
 
     resources = [
-        "arn:aws:dynamodb:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:table/${var.tf_ddb_state_lock_table}",
+        var.tf_ddb_state_lock_table,
     ]
   }
 
