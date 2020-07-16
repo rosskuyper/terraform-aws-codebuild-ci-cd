@@ -51,6 +51,7 @@ data "aws_iam_policy_document" "main" {
   statement {
     effect = "Allow"
     actions = [
+      "s3:ListObjects",
       "s3:PutObject",
       "s3:GetObject",
       "s3:GetObjectVersion",
@@ -59,6 +60,7 @@ data "aws_iam_policy_document" "main" {
     resources = concat(
       # Artifacts bucket for code build
       [
+        "${var.tf_remote_state_bucket_arn}",
         "${var.ci_cd_artifacts_bucket_arn}/${var.service_name}",
         "${var.ci_cd_artifacts_bucket_arn}/${var.service_name}/*",
       ],
