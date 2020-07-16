@@ -35,7 +35,6 @@ EOF
 data "aws_iam_policy_document" "main" {
   # S3 - bucket-level permissions for tf remote and artifacts bucket
   statement {
-    effect = "Allow"
     actions = [
       "s3:ListBucket",
       "s3:GetBucketAcl",
@@ -50,7 +49,6 @@ data "aws_iam_policy_document" "main" {
 
   # S3 - Give access to the terraform remote states and artifacts bucket
   statement {
-    effect = "Allow"
     actions = [
       "s3:PutObject",
       "s3:GetObject",
@@ -72,10 +70,21 @@ data "aws_iam_policy_document" "main" {
     )
   }
 
+  # Terraform DDB permissions
+  statement {
+    actions = [
+      "dynamodb:GetItem",
+      "dynamodb:PutItem",
+      "dynamodb:DeleteItem"
+    ]
+
+    resources = [
+        "arn:aws:dynamodb:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:table/${tf_ddb_state_lock_table}",
+    ]
+  }
+
   # Logs for this build
   statement {
-    effect = "Allow"
-
     actions = [
       "logs:CreateLogGroup",
       "logs:CreateLogStream",
@@ -90,8 +99,6 @@ data "aws_iam_policy_document" "main" {
 
   # Codebuild actions
   statement {
-    effect = "Allow"
-
     actions = [
       "codebuild:CreateReportGroup",
       "codebuild:CreateReport",
