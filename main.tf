@@ -37,6 +37,7 @@ data "aws_iam_policy_document" "main" {
   statement {
     effect = "Allow"
     actions = [
+      "s3:ListBucket",
       "s3:GetBucketAcl",
       "s3:GetBucketLocation",
     ]
@@ -51,7 +52,6 @@ data "aws_iam_policy_document" "main" {
   statement {
     effect = "Allow"
     actions = [
-      "s3:ListObjects",
       "s3:PutObject",
       "s3:GetObject",
       "s3:GetObjectVersion",
