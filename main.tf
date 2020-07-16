@@ -1,6 +1,11 @@
 data "aws_caller_identity" "current" {}
 data "aws_region" "current" {}
 
+locals {
+  tf_remote_state_keys   = length(var.tf_remote_state_keys) > 0 ? var.tf_remote_state_keys : ["${var.service_name}/terraform.tfstate"]
+  codebuild_project_name = "${var.service_name}-service-build"
+}
+
 # The service role for the codebuild project. Gives codebuild the right to assume it.
 resource "aws_iam_role" "main" {
   name = "${var.service_name}-code-build-service-role"
@@ -28,6 +33,20 @@ EOF
 # The calling code will need to add additional build-specific permissions
 #####
 data "aws_iam_policy_document" "main" {
+  # S3 - bucket-level permissions for tf remote and artifacts bucket
+  statement {
+    effect = "Allow"
+    actions = [
+      "s3:GetBucketAcl",
+      "s3:GetBucketLocation",
+    ]
+
+    resources = [
+      "${var.tf_remote_state_bucket_arn}",
+      "${var.ci_cd_artifacts_bucket_arn}",
+    ]
+  }
+
   # S3 - Give access to the terraform remote states and artifacts bucket
   statement {
     effect = "Allow"
@@ -35,34 +54,20 @@ data "aws_iam_policy_document" "main" {
       "s3:PutObject",
       "s3:GetObject",
       "s3:GetObjectVersion",
-      "s3:GetBucketAcl",
-      "s3:GetBucketLocation",
     ]
 
-    resources = [
-      # Remote state access for terraform
-      "${var.tf_remote_state_bucket_arn}",
-      "${var.tf_remote_state_bucket_arn}/*",
-
+    resources = concat(
       # Artifacts bucket for code build
-      "${var.ci_cd_artifacts_bucket_arn}",
-      "${var.ci_cd_artifacts_bucket_arn}/*",
-    ]
-  }
-
-  # DDB - allow for state lock
-  statement {
-    effect = "Allow"
-
-    actions = [
-      "dynamodb:PutItem",
-      "dynamodb:GetItem",
-      "dynamodb:DeleteItem",
-    ]
-
-    resources = [
-      var.tf_ddb_state_lock_table,
-    ]
+      [
+        "${var.ci_cd_artifacts_bucket_arn}/${var.service_name}",
+        "${var.ci_cd_artifacts_bucket_arn}/${var.service_name}/*",
+      ],
+      # Terraform remote state keys
+      [
+        for state_key in local.tf_remote_state_keys :
+        "${var.tf_remote_state_bucket_arn}/${state_key}"
+      ],
+    )
   }
 
   # Logs for this build
@@ -76,7 +81,7 @@ data "aws_iam_policy_document" "main" {
     ]
 
     resources = [
-      "arn:aws:logs::log-group:/aws/codebuild/${var.service_name}-service-build",
+      "arn:aws:logs:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:log-group:/aws/codebuild/${var.service_name}-service-build",
       "arn:aws:logs:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:log-group:/aws/codebuild/${var.service_name}-service-build:*",
     ]
   }
@@ -86,11 +91,14 @@ data "aws_iam_policy_document" "main" {
     effect = "Allow"
 
     actions = [
-      "codebuild:*",
+      "codebuild:CreateReportGroup",
+      "codebuild:CreateReport",
+      "codebuild:UpdateReport",
+      "codebuild:BatchPutTestCases",
     ]
 
     resources = [
-      "arn:aws:codebuild:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:project/*",
+      "arn:aws:codebuild:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:report-group/${local.codebuild_project_name}-*",
     ]
   }
 
@@ -124,10 +132,10 @@ resource "aws_iam_role_policy" "main" {
 
 # The actual build
 resource "aws_codebuild_project" "service_build" {
-  name          = "${var.service_name}-service-build"
+  name          = local.codebuild_project_name
+  service_role  = aws_iam_role.main.arn
   description   = "Used for pulling, building, testing and publishing applications resources"
   build_timeout = "90"
-  service_role  = aws_iam_role.main.arn
 
   artifacts {
     type                = "S3"

@@ -25,6 +25,12 @@ variable "ci_cd_artifacts_bucket_arn" {
   type        = string
 }
 
+variable "tf_remote_state_keys" {
+  description = "TF Remote state keys to which access is required."
+  type        = list(string)
+  default     = []
+}
+
 variable "tf_ddb_state_lock_table" {
   description = "DynamoDB table used for terraform state lock"
   type        = string
