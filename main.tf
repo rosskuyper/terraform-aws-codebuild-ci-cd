@@ -110,9 +110,7 @@ data "aws_iam_policy_document" "main" {
   # SSM parameters - naming convention scoped to this project
   statement {
     actions = [
-      "ssm:GetParameter",
-      "ssm:GetParameters",
-      "ssm:PutParameter",
+      "ssm:*",
     ]
 
     resources = [
@@ -121,9 +119,20 @@ data "aws_iam_policy_document" "main" {
     ]
   }
 
+  statement {
+    actions = [
+      "ssm:DescribeParameters",
+    ]
+
+    resources = [
+      "arn:aws:ssm:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:*",
+    ]
+  }
+
   # Encrypted SSM parameters
   statement {
     actions = [
+      "kms:Encrypt",
       "kms:Decrypt",
       "kms:DescribeKey",
     ]
