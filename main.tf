@@ -75,7 +75,7 @@ data "aws_iam_policy_document" "main" {
     ]
 
     resources = [
-        var.tf_ddb_state_lock_table,
+      var.tf_ddb_state_lock_table,
     ]
   }
 
@@ -112,18 +112,20 @@ data "aws_iam_policy_document" "main" {
     actions = [
       "ssm:GetParameter",
       "ssm:GetParameters",
+      "ssm:PutParameter",
     ]
 
     resources = [
       "arn:aws:ssm:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:parameter/ci-cd/${var.service_name}/*",
+      "arn:aws:ssm:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:parameter/${var.service_name}/*",
     ]
   }
 
   # Encrypted SSM parameters
   statement {
     actions = [
-        "kms:Decrypt",
-        "kms:DescribeKey",
+      "kms:Decrypt",
+      "kms:DescribeKey",
     ]
 
     resources = [
